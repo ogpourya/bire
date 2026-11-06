@@ -1,4 +1,4 @@
-"""Human DSL Renderer for BiRe ASTs."""
+"""Human DSL Renderer for bire ASTs."""
 
 from __future__ import annotations
 
@@ -105,7 +105,7 @@ class _HumanDSLRenderer:
         self.is_bytes = is_bytes
 
     def render_block(self, node: ASTNode, indent_level: int = 0) -> list[str]:
-        """Render an AST node into indented lines of BiRe DSL code."""
+        """Render an AST node into indented lines of bire DSL code."""
         prefix = "    " * indent_level
 
         match node:
@@ -226,7 +226,7 @@ class _HumanDSLRenderer:
 
 
 def render_human(pattern: RegexPattern | ASTNode) -> str:
-    """Render a BiRe AST node or RegexPattern into clean, 4-space indented Human DSL code."""
+    """Render a bire AST node or RegexPattern into clean, 4-space indented Human DSL code."""
     root: ASTNode
     flags = 0
     is_bytes = False

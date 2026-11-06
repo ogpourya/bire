@@ -1,4 +1,4 @@
-"""Integration tests for BiRe CLI commands and piping."""
+"""Integration tests for bire CLI commands and piping."""
 
 import subprocess
 import sys
@@ -39,7 +39,7 @@ def test_cli_verify_success_and_failure() -> None:
         check=False,
     )
     assert p_ok.returncode == 0
-    assert "VERIFICATION SUCCESS" in p_ok.stdout
+    assert "VERIFIED" in p_ok.stdout
 
     # Invalid regex syntax -> exit code 1
     p_err = subprocess.run(
@@ -49,3 +49,25 @@ def test_cli_verify_success_and_failure() -> None:
         check=False,
     )
     assert p_err.returncode == 1
+
+
+def test_cli_demo_and_inline_args() -> None:
+    # Test demo command
+    p_demo = subprocess.run(
+        [sys.executable, "-m", "bire.cli", "demo"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert p_demo.returncode == 0
+    assert "bire demo" in p_demo.stdout
+
+    # Test direct inline string argument
+    p_inline = subprocess.run(
+        [sys.executable, "-m", "bire.cli", "to-human", "a+"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert p_inline.returncode == 0
+    assert "REPEAT ONE OR MORE TIMES:" in p_inline.stdout

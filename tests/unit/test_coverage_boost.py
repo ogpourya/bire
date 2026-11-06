@@ -330,3 +330,13 @@ def test_python_parser_unsupported_edge() -> None:
         mock_parse.return_value = mock_res
         with pytest.raises(ParseError):
             parse_python_regex("a")
+
+
+def test_cli_demo_in_process() -> None:
+    # Call demo directly inside process for line coverage
+    assert main(["demo"]) == 0
+    # Call empty argv for help
+    assert main([]) == 0
+    # Call with --version
+    with pytest.raises(SystemExit):
+        main(["--version"])

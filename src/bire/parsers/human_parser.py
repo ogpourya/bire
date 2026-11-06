@@ -1,4 +1,4 @@
-"""Parser for BiRe Human DSL into AST nodes using Lark."""
+"""Parser for bire Human DSL into AST nodes using Lark."""
 
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ from bire.ast.nodes import (
     TextLiteral,
 )
 from bire.ast.validator import validate_ast
-from bire.parsers.indenter import BiReIndenter
+from bire.parsers.indenter import bireIndenter
 
 _GRAMMAR_PATH = Path(__file__).parent / "grammar.lark"
 with open(_GRAMMAR_PATH, encoding="utf-8") as _f:
@@ -45,7 +45,7 @@ with open(_GRAMMAR_PATH, encoding="utf-8") as _f:
 _PARSER = Lark(
     _GRAMMAR_TEXT,
     parser="lalr",
-    postlex=BiReIndenter(),
+    postlex=bireIndenter(),
 )
 
 
@@ -93,7 +93,7 @@ def _assign_group_ids(root: ASTNode) -> ASTNode:
 
 
 class _DSLTransformer(Transformer[Token, Any]):
-    """Transform Lark parse tree into BiRe AST."""
+    """Transform Lark parse tree into bire AST."""
 
     def __init__(self, is_bytes: bool = False) -> None:
         super().__init__()
@@ -339,7 +339,7 @@ class _DSLTransformer(Transformer[Token, Any]):
 
 
 def parse_human_dsl(dsl_code: str) -> RegexPattern:
-    """Parse a BiRe Human DSL code string into a RegexPattern AST.
+    """Parse a bire Human DSL code string into a RegexPattern AST.
 
     Raises:
         ParseError: When grammar or syntax errors occur.

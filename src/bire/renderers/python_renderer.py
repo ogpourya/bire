@@ -240,7 +240,7 @@ def _flags_to_letters(flags: int) -> str:
 
 
 class _StringRenderer:
-    """Renders BiRe AST nodes into Python regex str patterns."""
+    """Renders bire AST nodes into Python regex str patterns."""
 
     def render(self, node: ASTNode, parent_prec: int = PREC_ALTERNATION) -> str:
         match node:
@@ -395,7 +395,7 @@ class _StringRenderer:
 
 
 class _BytesRenderer:
-    """Renders BiRe AST nodes into Python regex bytes patterns."""
+    """Renders bire AST nodes into Python regex bytes patterns."""
 
     def render(self, node: ASTNode, parent_prec: int = PREC_ALTERNATION) -> bytes:
         match node:
@@ -546,7 +546,7 @@ class _BytesRenderer:
 
 
 def render_python(pattern: RegexPattern | ASTNode, is_bytes: bool = False) -> str | bytes:
-    """Render a BiRe AST node or RegexPattern into a valid Python regex string or bytes.
+    """Render a bire AST node or RegexPattern into a valid Python regex string or bytes.
 
     Raises:
         RenderError: When an unsupported node is encountered.

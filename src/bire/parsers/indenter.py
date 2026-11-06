@@ -1,4 +1,4 @@
-"""4-space indentation postlexer for BiRe Human DSL."""
+"""4-space indentation postlexer for bire human DSL."""
 
 from __future__ import annotations
 
@@ -16,3 +16,6 @@ class BiReIndenter(Indenter):
     INDENT_type = "_INDENT"
     DEDENT_type = "_DEDENT"
     tab_len = 4
+
+
+bireIndenter = BiReIndenter

@@ -1,7 +1,7 @@
 [project]
 name = "bire"
 version = "0.1.0"
-description = "Bilingual Regex: Bidirectional transpiler between Python regex and human DSL"
+description = "bire: deterministic bidirectional transpiler between Python regex and human DSL"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

@@ -1,4 +1,4 @@
-// BiRe Human DSL Grammar (Lark LALR(1))
+// bire Human DSL Grammar (Lark LALR(1))
 
 ?start: dsl_document
 

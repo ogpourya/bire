@@ -27,13 +27,13 @@ TEST_INPUTS = [
 
 def run_demo() -> int:
     print("=" * 80)
-    print("BiRe End-to-End Transpilation Verification Demo")
+    print("bire End-to-End Transpilation Verification Demo")
     print("=" * 80)
     print(f"Original Regex: {COMPLEX_REGEX}\n")
 
-    # Step 1: Transpile to BiRe Human DSL
+    # Step 1: Transpile to bire Human DSL
     dsl = to_human(COMPLEX_REGEX)
-    print("Generated BiRe Human DSL:")
+    print("Generated bire Human DSL:")
     print("-" * 40)
     print(dsl)
     print("-" * 40)

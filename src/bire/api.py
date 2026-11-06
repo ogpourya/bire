@@ -1,4 +1,4 @@
-"""Public API for BiRe (Bilingual Regex transpiler)."""
+"""Public API for bire (Bilingual Regex transpiler)."""
 
 from __future__ import annotations
 
@@ -13,20 +13,20 @@ from bire.renderers.python_renderer import render_python
 
 
 def to_human(pattern: str | bytes, flags: int = 0) -> str:
-    """Transpile a Python regular expression into BiRe Human DSL code."""
+    """Transpile a Python regular expression into bire Human DSL code."""
     ast_tree = parse_python_regex(pattern, flags=flags)
     return render_human(ast_tree)
 
 
 def to_python(dsl_code: str) -> tuple[str | bytes, int]:
-    """Transpile BiRe Human DSL code into a Python regex pattern and flag bitmask."""
+    """Transpile bire Human DSL code into a Python regex pattern and flag bitmask."""
     ast_tree: RegexPattern = parse_human_dsl(dsl_code)
     rendered_pattern = render_python(ast_tree)
     return rendered_pattern, ast_tree.flags
 
 
 def compile_human(dsl_code: str) -> re.Pattern[Any]:
-    """Compile BiRe Human DSL code directly into a standard Python re.Pattern object."""
+    """Compile bire Human DSL code directly into a standard Python re.Pattern object."""
     pattern, flags = to_python(dsl_code)
     return re.compile(pattern, flags)
 

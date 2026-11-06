@@ -1,8 +1,11 @@
-"""Exception hierarchy for BiRe."""
+"""Exception hierarchy for bire."""
 
 
 class BiReError(Exception):
-    """Base exception for all BiRe errors."""
+    """Base exception for all bire errors."""
+
+
+bireError = BiReError
 
 
 class ValidationError(BiReError):

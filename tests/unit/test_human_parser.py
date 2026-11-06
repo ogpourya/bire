@@ -1,4 +1,4 @@
-"""Unit tests for BiRe Human DSL parser and renderer."""
+"""Unit tests for bire Human DSL parser and renderer."""
 
 import re
 

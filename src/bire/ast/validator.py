@@ -1,4 +1,4 @@
-"""Semantic validator for BiRe ASTs."""
+"""Semantic validator for bire ASTs."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Unit tests for BiRe AST definitions and semantic validator."""
+"""Unit tests for bire AST definitions and semantic validator."""
 
 import re
 

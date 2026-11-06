@@ -1,4 +1,4 @@
-"""AST node definitions for BiRe."""
+"""AST node definitions for bire."""
 
 from __future__ import annotations
 
