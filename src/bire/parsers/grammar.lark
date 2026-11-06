@@ -1,0 +1,160 @@
+// BiRe Human DSL Grammar (Lark LALR(1))
+
+?start: dsl_document
+
+dsl_document: (_NL)* [header] statement_list (_NL)*
+
+header: mode_decl [flags_decl]
+      | flags_decl
+
+mode_decl: _T_MODE MODE_TYPE _NL
+flags_decl: _T_FLAGS flags_list _NL
+flags_list: "[" [scoped_flag ("," scoped_flag)*] "]"
+
+scoped_flag: [FLAG_SIGN] FLAG_NAME
+FLAG_SIGN: "+" | "-"
+FLAG_NAME: /[A-Za-z_]+/
+MODE_TYPE: "STRING" | "BYTES"
+
+statement_list: statement+
+
+statement: simple_stmt _NL
+         | compound_stmt
+
+simple_stmt: "LITERAL" ESCAPED_STRING             -> lit_stmt
+           | "BYTES" ESCAPED_STRING               -> bytes_stmt
+           | "BYTE" INT_OR_HEX                    -> byte_stmt
+           | _T_EMPTY                               -> empty_stmt
+           | _T_MATCH_CAPTURE capture_ref           -> match_capture_stmt
+           | anchor_stmt
+           | predefined_stmt
+           | inline_repeat
+
+inline_repeat: _T_REPEAT "(" simple_stmt "," quant_spec ["," quant_mode] ")" -> inline_repeat_stmt
+
+anchor_stmt: _T_START_OF_STRING     -> start_of_string
+           | _T_END_OF_STRING       -> end_of_string
+           | _T_ABSOLUTE_END        -> absolute_end
+           | _T_START_OF_LINE       -> start_of_line
+           | _T_END_OF_LINE         -> end_of_line
+           | _T_WORD_BOUNDARY       -> word_boundary
+           | _T_NOT_WORD_BOUNDARY   -> not_word_boundary
+
+predefined_stmt: _T_ANY_CHARACTER      -> any_char
+               | _T_DIGIT              -> digit
+               | _T_NOT_DIGIT          -> not_digit
+               | _T_WORD_CHARACTER     -> word_char
+               | _T_NOT_WORD_CHARACTER -> not_word_char
+               | _T_WHITESPACE         -> whitespace
+               | _T_NOT_WHITESPACE     -> not_whitespace
+
+capture_ref: ESCAPED_STRING | INT
+
+compound_stmt: alternation_stmt
+             | char_class_stmt
+             | block_repeat_stmt
+             | capture_stmt
+             | group_stmt
+             | atomic_group_stmt
+             | with_flags_stmt
+             | lookaround_stmt
+             | conditional_stmt
+
+alternation_stmt: _T_EITHER _NL _INDENT statement_list _DEDENT (_T_OR _NL _INDENT statement_list _DEDENT)+
+
+char_class_stmt: _T_ONE_OF _NL _INDENT class_element+ _DEDENT  -> one_of_stmt
+               | _T_NONE_OF _NL _INDENT class_element+ _DEDENT -> none_of_stmt
+
+class_element: class_elem_item _NL
+class_elem_item: "CHAR" ESCAPED_STRING                     -> class_char
+               | "CHARS" ESCAPED_STRING                    -> class_chars
+               | "RANGE" ESCAPED_STRING "TO" ESCAPED_STRING-> class_range
+               | "BYTE" INT_OR_HEX                         -> class_byte
+               | "BYTES" ESCAPED_STRING                    -> class_bytes
+               | "BYTE_RANGE" INT_OR_HEX "TO" INT_OR_HEX   -> class_byte_range
+               | predefined_stmt
+
+block_repeat_stmt: _T_REPEAT quant_spec [quant_mode] ":" _NL _INDENT statement_list _DEDENT
+
+quant_spec: _T_ZERO_OR_MORE                                -> q_zero_or_more
+          | _T_ONE_OR_MORE                                 -> q_one_or_more
+          | _T_AT_LEAST INT _T_TIMES                       -> q_at_least
+          | _T_AT_MOST INT _T_TIMES                        -> q_at_most
+          | _T_BETWEEN INT _T_AND INT _T_TIMES             -> q_between
+          | _T_EXACTLY INT _T_TIMES                        -> q_exactly
+
+quant_mode: _T_LAZILY        -> q_lazy
+          | _T_POSSESSIVELY  -> q_possessive
+
+capture_stmt: _T_CAPTURE [ESCAPED_STRING] ":" _NL _INDENT statement_list _DEDENT
+
+group_stmt: _T_GROUP _NL _INDENT statement_list _DEDENT
+
+atomic_group_stmt: _T_ATOMIC_GROUP _NL _INDENT statement_list _DEDENT
+
+with_flags_stmt: _T_WITH_FLAGS flags_list ":" _NL _INDENT statement_list _DEDENT
+
+lookaround_stmt: _T_LOOKAHEAD _NL _INDENT statement_list _DEDENT          -> lookahead
+               | _T_NEG_LOOKAHEAD _NL _INDENT statement_list _DEDENT      -> neg_lookahead
+               | _T_LOOKBEHIND _NL _INDENT statement_list _DEDENT         -> lookbehind
+               | _T_NEG_LOOKBEHIND _NL _INDENT statement_list _DEDENT     -> neg_lookbehind
+
+conditional_stmt: _T_IF_CAPTURE capture_ref ":" _NL _INDENT statement_list _DEDENT [_T_ELSE _NL _INDENT statement_list _DEDENT]
+
+_T_MODE: "MODE:"
+_T_FLAGS: "FLAGS:"
+_T_EITHER: "EITHER:"
+_T_OR: "OR:"
+_T_ONE_OF: "ONE OF:"
+_T_NONE_OF: "NONE OF:"
+_T_EMPTY: "EMPTY"
+_T_CAPTURE: "CAPTURE"
+_T_GROUP: "GROUP:"
+_T_ATOMIC_GROUP: "ATOMIC GROUP:"
+_T_WITH_FLAGS: "WITH FLAGS"
+_T_LOOKAHEAD: "LOOKAHEAD:"
+_T_NEG_LOOKAHEAD: "NEGATIVE LOOKAHEAD:"
+_T_LOOKBEHIND: "LOOKBEHIND:"
+_T_NEG_LOOKBEHIND: "NEGATIVE LOOKBEHIND:"
+_T_IF_CAPTURE: "IF CAPTURE"
+_T_ELSE: "ELSE:"
+_T_MATCH_CAPTURE: "MATCH CAPTURE"
+_T_REPEAT: "REPEAT"
+_T_LAZILY: "LAZILY"
+_T_POSSESSIVELY: "POSSESSIVELY"
+
+_T_START_OF_STRING: "START OF STRING"
+_T_END_OF_STRING: "END OF STRING"
+_T_ABSOLUTE_END: "ABSOLUTE END"
+_T_START_OF_LINE: "START OF LINE"
+_T_END_OF_LINE: "END OF LINE"
+_T_WORD_BOUNDARY: "WORD BOUNDARY"
+_T_NOT_WORD_BOUNDARY: "NOT WORD BOUNDARY"
+
+_T_ANY_CHARACTER: "ANY CHARACTER"
+_T_DIGIT: "DIGIT"
+_T_NOT_DIGIT: "NOT DIGIT"
+_T_WORD_CHARACTER: "WORD CHARACTER"
+_T_NOT_WORD_CHARACTER: "NOT WORD CHARACTER"
+_T_WHITESPACE: "WHITESPACE"
+_T_NOT_WHITESPACE: "NOT WHITESPACE"
+
+_T_ZERO_OR_MORE: "ZERO OR MORE TIMES"
+_T_ONE_OR_MORE: "ONE OR MORE TIMES"
+_T_AT_LEAST: "AT LEAST"
+_T_AT_MOST: "AT MOST"
+_T_BETWEEN: "BETWEEN"
+_T_EXACTLY: "EXACTLY"
+_T_TIMES: "TIMES"
+_T_AND: "AND"
+
+INT_OR_HEX: /0x[0-9a-fA-F]+/ | /[0-9]+/
+INT: /[0-9]+/
+
+%import common.ESCAPED_STRING
+%ignore /[\t \f]+/
+%ignore COMMENT
+%declare _INDENT _DEDENT
+
+COMMENT: /#[^\n]*/
+_NL: ( /\r?\n[\t ]*/ | COMMENT )+
