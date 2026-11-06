@@ -1,0 +1,37 @@
+[project]
+name = "bire"
+version = "0.1.0"
+description = "Bilingual Regex: Bidirectional transpiler between Python regex and human DSL"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "lark>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "pytest-timeout>=2.3.0",
+    "hypothesis>=6.100.0",
+    "mypy>=1.10.0",
+    "ruff>=0.5.0",
+]
+
+[project.scripts]
+bire = "bire.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bire"]
