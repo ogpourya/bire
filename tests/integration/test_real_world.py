@@ -301,3 +301,55 @@ def test_real_world_patterns_differential() -> None:
 
             # 7. verify helper
             assert verify(pattern, s), f"verify() returned False on {pattern!r} with {s!r}"
+
+
+def test_full_rfc5322_email_matcher() -> None:
+    from bire.email import RFC5322_EMAIL_REGEX, validate_email
+
+    valid_samples = [
+        "simple@example.com",
+        "very.common@example.com",
+        "disposable.style.email.with+symbol@example.com",
+        "other.email-with-hyphen@and.subdomains.example.com",
+        "fully-qualified-domain@example.com",
+        "user.name+tag+sorting@example.com",
+        "x@example.com",
+        "example-indeed@strange-example.com",
+        "admin@mailserver1.domain.org",
+        "example@s.example",
+        '" "@example.org',
+        '"john..doe"@example.org',
+        '"very.unusual.@.unusual.com"@example.com',
+        r'"very.(),:;<>[]\".VERY.\"very@\\ \"very\".unusual"@strange.example.com',
+        "user%example.com@example.org",
+        "user-@example.org",
+        "postmaster@[123.123.123.123]",
+        "postmaster@[IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
+    ]
+
+    invalid_samples = [
+        "Abc.example.com",
+        "A@b@c@example.com",
+        'a"b(c)d,e:f;g<h>i[j\\k]l@example.com',
+        'just"not"right@example.com',
+        'this is"not\\allowed@example.com',
+        'this\\ still\\"not\\\\allowed@example.com',
+        "user@domain..com",
+        "@example.com",
+        "user@",
+        "user@.example.com",
+        "user@example.com.",
+        "user@-example.com",
+        "user@example-.com",
+    ]
+
+    for email in valid_samples:
+        valid, local, dom = validate_email(email)
+        assert valid is True, f"Failed on valid email: {email}"
+        assert local is not None and dom is not None
+        assert verify(RFC5322_EMAIL_REGEX, email) is True
+
+    for email in invalid_samples:
+        valid, local, dom = validate_email(email)
+        assert valid is False, f"Failed on invalid email: {email}"
+        assert verify(RFC5322_EMAIL_REGEX, email) is True
