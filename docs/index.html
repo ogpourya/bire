@@ -4,9 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bire ✦ bilingual regex transpiler</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
   <style>
     :root {
@@ -19,8 +16,8 @@
       --pink: #f472b6;
       --green: #34d399;
       --red: #f87171;
-      --mono: 'JetBrains Mono', monospace;
-      --sans: 'Inter', system-ui, sans-serif;
+      --mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -74,6 +71,7 @@
       border-radius: 50%;
       background: #fbbf24;
       box-shadow: 0 0 8px #fbbf24;
+      transition: all 0.3s;
     }
     .status-dot.ready { background: var(--green); box-shadow: 0 0 8px var(--green); }
     main {
@@ -140,6 +138,7 @@
       border-radius: 4px;
       font-size: 0.75rem;
       cursor: pointer;
+      transition: all 0.15s;
     }
     .copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
     textarea {
@@ -200,7 +199,7 @@
 </head>
 <body>
   <header>
-    <div class="brand">
+    <div class=brand>
       <span class="sparkle">✦</span>
       <span>bire</span>
       <span class="badge-wasm">Python WASM</span>
@@ -225,7 +224,7 @@
       <div class="pane">
         <div class="pane-header">
           <span class="pane-title">Python Regex</span>
-          <button class="copy-btn" onclick="copyText('regexInput')">Copy</button>
+          <button class="copy-btn" id="copyRegexBtn" onclick="copyText('regexInput', 'copyRegexBtn')">Copy</button>
         </div>
         <textarea id="regexInput" spellcheck="false" placeholder="Enter Python regular expression..."></textarea>
       </div>
@@ -233,7 +232,7 @@
       <div class="pane">
         <div class="pane-header">
           <span class="pane-title">bire Human DSL</span>
-          <button class="copy-btn" onclick="copyText('dslInput')">Copy</button>
+          <button class="copy-btn" id="copyDslBtn" onclick="copyText('dslInput', 'copyDslBtn')">Copy</button>
         </div>
         <textarea id="dslInput" spellcheck="false" placeholder="Enter bire 4-space indented DSL..."></textarea>
       </div>
@@ -254,11 +253,26 @@
     let debounceTimer = null;
 
     const PRESETS = {
-      email: '^(?P<local>(?:[a-zA-Z0-9!#$%&\'*+/=?^_`{|}~-]+|"(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\"\\\\]|\\\\[\\x20-\\x7e])*")(?:\.(?:[a-zA-Z0-9!#$%&\'*+/=?^_`{|}~-]+|"(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\"\\\\]|\\\\[\\x20-\\x7e])*"))*)@(?P<domain>(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*|\\[(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\[\\]\\\\]|\\\\[\\x20-\\x7e])*\\]))$',
-      semver: '^(?P<major>0|[1-9]\\d*)\\.(?P<minor>0|[1-9]\\d*)\\.(?P<patch>0|[1-9]\\d*)(?:-(?P<prerelease>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$',
-      ipv4: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$',
-      django: '^api/v(?P<version>[1-9]\\d*)/(?P<resource>[a-z_-]+)/(?:(?P<id>\\d+)/)?$',
-      simple: 'cat|dog|bird'
+      email: {
+        regex: '^(?P<local>(?:[a-zA-Z0-9!#$%&'*+/=?^_{|}~-]+|"(?:[^\x00-\x08\x0a-\x1f\x7f\"\\]|\\[\x20-\x7e])*"))*)@(?P<domain>(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*|\[(?:[^\x00-\x08\x0a-\x1f\x7f\[\]\\]|\\[\x20-\x7e])*\]))$',
+        test: 'user.name+tag@[192.168.1.1]'
+      },
+      semver: {
+        regex: '^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$',
+        test: '1.2.3-alpha.1+build.42'
+      },
+      ipv4: {
+        regex: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$',
+        test: '192.168.1.254'
+      },
+      django: {
+        regex: '^api/v(?P<version>[1-9]\d*)/(?P<resource>[a-z_-]+)/(?:(?P<id>\d+)/)?$',
+        test: 'api/v1/users/42/'
+      },
+      simple: {
+        regex: 'cat|dog|bird',
+        test: 'dog'
+      }
     };
 
     async function initPyodide() {
@@ -274,16 +288,14 @@
           if (!res.ok) throw new Error('Failed to fetch ' + filename);
           const buf = await res.arrayBuffer();
           pyodide.FS.writeFile('/' + filename, new Uint8Array(buf));
-          await pyodide.runPythonAsync(`
-import micropip
-await micropip.install("emfs:/${filename}")
-`);
+          await pyodide.runPythonAsync();
         }
 
         await fetchAndInstall('lark-1.3.1-py3-none-any.whl');
         await fetchAndInstall('bire-0.1.0-py3-none-any.whl');
 
-        await pyodide.runPythonAsync('import bire\nprint("bire wasm initialized")');
+        await pyodide.runPythonAsync('import bire
+print("bire wasm initialized")');
 
         document.getElementById('statusDot').classList.add('ready');
         document.getElementById('statusText').innerText = 'Ready';
@@ -301,11 +313,13 @@ await micropip.install("emfs:/${filename}")
         try {
           const pattern = document.getElementById('regexInput').value;
           const escaped = JSON.stringify(pattern);
-          const dsl = await pyodide.runPythonAsync(`bire.to_human(${escaped})`);
+          const dsl = await pyodide.runPythonAsync();
           document.getElementById('dslInput').value = dsl;
           runInspector();
         } catch (e) {
-          document.getElementById('matchStatus').innerText = 'Invalid Regex: ' + e.message.split('\n')[0];
+          document.getElementById('matchStatus').innerText = 'Invalid Regex: ' + e.message.split('
+')[0];
+          document.getElementById('matchStatus').style.color = 'var(--red)';
         }
       }, 120);
     }
@@ -317,11 +331,13 @@ await micropip.install("emfs:/${filename}")
         try {
           const dsl = document.getElementById('dslInput').value;
           const escaped = JSON.stringify(dsl);
-          const pyPattern = await pyodide.runPythonAsync(`bire.to_python(${escaped})[0]`);
+          const pyPattern = await pyodide.runPythonAsync();
           document.getElementById('regexInput').value = pyPattern;
           runInspector();
         } catch (e) {
-          document.getElementById('matchStatus').innerText = 'Invalid DSL: ' + e.message.split('\n')[0];
+          document.getElementById('matchStatus').innerText = 'Invalid DSL: ' + e.message.split('
+')[0];
+          document.getElementById('matchStatus').style.color = 'var(--red)';
         }
       }, 120);
     }
@@ -334,55 +350,74 @@ await micropip.install("emfs:/${filename}")
       const groupList = document.getElementById('groupList');
       groupList.innerHTML = '';
 
+      if (!pattern) {
+        status.innerText = 'Waiting for pattern';
+        status.style.color = 'var(--text-muted)';
+        return;
+      }
       if (!test) {
-        status.innerText = 'Waiting for input';
+        status.innerText = 'Waiting for test string';
         status.style.color = 'var(--text-muted)';
         return;
       }
 
       try {
-        const res = await pyodide.runPythonAsync(`
-import re, json
-p = ${JSON.stringify(pattern)}
-t = ${JSON.stringify(test)}
-cp = re.compile(p)
-m = cp.fullmatch(t)
-if m:
-    json.dumps({'matched': True, 'groups': m.groupdict(), 'tuple': m.groups()})
-else:
-    json.dumps({'matched': False})
-`);
+        const res = await pyodide.runPythonAsync();
         const data = JSON.parse(res);
-        if (data.matched) {
-          status.innerText = '✔ Full Match';
+        if (data.status === 'fullmatch') {
+          status.innerText = '✔ Full Match (span 0:' + test.length + ')';
           status.style.color = 'var(--green)';
+        } else if (data.status === 'partialmatch') {
+          status.innerText = '✔ Match (span ' + data.span[0] + ':' + data.span[1] + ')';
+          status.style.color = 'var(--purple)';
+        } else if (data.status === 'nomatch') {
+          status.innerText = '✘ No Match';
+          status.style.color = 'var(--text-muted)';
+        } else if (data.status === 'error') {
+          status.innerText = 'Regex Error: ' + data.error;
+          status.style.color = 'var(--red)';
+        }
+
+        if (data.groups && Object.keys(data.groups).length > 0) {
           for (const [k, v] of Object.entries(data.groups)) {
             const el = document.createElement('div');
             el.className = 'group-tag';
-            el.innerHTML = `<span>${k}:</span> ${v ?? 'None'}`;
+            el.innerHTML = '<span>' + k + ':</span> ' + (v !== null ? v : '<em style="opacity:0.4">null</em>');
             groupList.appendChild(el);
           }
-        } else {
-          status.innerText = '✘ No Match';
-          status.style.color = 'var(--red)';
+        } else if (data.tuple && data.tuple.length > 0) {
+          data.tuple.forEach((val, idx) => {
+            const el = document.createElement('div');
+            el.className = 'group-tag';
+            el.innerHTML = '<span>Group ' + (idx + 1) + ':</span> ' + (val !== null ? val : '<em style="opacity:0.4">null</em>');
+            groupList.appendChild(el);
+          });
         }
       } catch (err) {
-        status.innerText = 'Regex Error';
+        status.innerText = 'Execution Error: ' + (err.message ? err.message.split('
+')[0] : String(err));
         status.style.color = 'var(--red)';
       }
     }
 
     function loadPreset(key) {
-      document.getElementById('regexInput').value = PRESETS[key];
-      if (key === 'email') document.getElementById('testString').value = 'user.name+tag@[192.168.1.1]';
-      if (key === 'semver') document.getElementById('testString').value = '1.2.3-alpha.1';
-      if (key === 'ipv4') document.getElementById('testString').value = '192.168.1.254';
-      if (key === 'simple') document.getElementById('testString').value = 'dog';
+      const preset = PRESETS[key];
+      if (!preset) return;
+      document.getElementById('regexInput').value = preset.regex;
+      document.getElementById('testString').value = preset.test;
       onRegexInput();
     }
 
-    function copyText(id) {
-      navigator.clipboard.writeText(document.getElementById(id).value);
+    function copyText(inputId, btnId) {
+      navigator.clipboard.writeText(document.getElementById(inputId).value);
+      const btn = document.getElementById(btnId);
+      const orig = btn.innerText;
+      btn.innerText = 'Copied!';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => {
+        btn.innerText = orig;
+        btn.style.color = '';
+      }, 1200);
     }
 
     document.getElementById('regexInput').addEventListener('input', onRegexInput);
