@@ -1,0 +1,481 @@
+import json
+from pathlib import Path
+from bire.email import RFC5322_EMAIL_REGEX
+
+PRESETS = {
+    "email": {
+        "regex": RFC5322_EMAIL_REGEX,
+        "test": "user.name+tag@[192.168.1.1]"
+    },
+    "semver": {
+        "regex": r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$",
+        "test": "1.2.3-alpha.1+build.42"
+    },
+    "ipv4": {
+        "regex": r"^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+        "test": "192.168.1.254"
+    },
+    "django": {
+        "regex": r"^api/v(?P<version>[1-9]\d*)/(?P<resource>[a-z_-]+)/(?:(?P<id>\d+)/)?$",
+        "test": "api/v1/users/42/"
+    },
+    "simple": {
+        "regex": r"cat|dog|bird",
+        "test": "dog"
+    }
+}
+
+presets_json = json.dumps(PRESETS, indent=2)
+
+html_template = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bire ✦ bilingual regex transpiler</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23f472b6%22>✦</text></svg>">
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+  <style>
+    :root {
+      --bg: #090b10;
+      --card: #111420;
+      --border: #1f263d;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --purple: #a78bfa;
+      --pink: #f472b6;
+      --green: #34d399;
+      --red: #f87171;
+      --mono: ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1.1rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(17, 20, 32, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 600;
+      font-size: 1.15rem;
+    }
+    .brand span.sparkle { color: var(--pink); font-size: 1.2rem; }
+    .badge-wasm {
+      background: #1e1b4b;
+      color: var(--purple);
+      font-size: 0.72rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid #3730a3;
+      font-family: var(--mono);
+    }
+    .status-pill {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.75rem;
+      border-radius: 999px;
+      font-family: var(--mono);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: 1px solid var(--border);
+      background: var(--card);
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #fbbf24;
+      box-shadow: 0 0 8px #fbbf24;
+      transition: all 0.3s;
+    }
+    .status-dot.ready { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .presets {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .presets span { font-size: 0.8rem; color: var(--text-muted); margin-right: 0.3rem; }
+    .preset-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      flex: 1;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .pane {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .pane-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0d101a;
+    }
+    .pane-title {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--purple);
+    }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
+    textarea {
+      flex: 1;
+      min-height: 320px;
+      background: transparent;
+      border: none;
+      padding: 1rem;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.55;
+      resize: vertical;
+      outline: none;
+    }
+    .inspector {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .inspector-input {
+      width: 100%;
+      background: #090b10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.65rem 0.85rem;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .inspector-input:focus { border-color: var(--purple); }
+    .matches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      min-height: 24px;
+    }
+    .group-tag {
+      background: #1e1b4b;
+      border: 1px solid #3730a3;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+    .group-tag span { color: var(--pink); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="sparkle">✦</span>
+      <span>bire</span>
+      <span class="badge-wasm">Python WASM</span>
+    </div>
+    <div class="status-pill" id="statusPill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Loading WASM...</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="presets">
+      <span>Presets:</span>
+      <button class="preset-btn" onclick="loadPreset('email')">RFC 5322 Email</button>
+      <button class="preset-btn" onclick="loadPreset('semver')">SemVer 2.0</button>
+      <button class="preset-btn" onclick="loadPreset('ipv4')">IPv4 Octets</button>
+      <button class="preset-btn" onclick="loadPreset('django')">Django Route</button>
+      <button class="preset-btn" onclick="loadPreset('simple')">Simple Branch</button>
+    </div>
+
+    <div class="grid">
+      <div class="pane">
+        <div class="pane-header">
+          <span class="pane-title">Python Regex</span>
+          <button class="copy-btn" id="copyRegexBtn" onclick="copyText('regexInput', 'copyRegexBtn')">Copy</button>
+        </div>
+        <textarea id="regexInput" spellcheck="false" placeholder="Enter Python regular expression..."></textarea>
+      </div>
+
+      <div class="pane">
+        <div class="pane-header">
+          <span class="pane-title">bire Human DSL</span>
+          <button class="copy-btn" id="copyDslBtn" onclick="copyText('dslInput', 'copyDslBtn')">Copy</button>
+        </div>
+        <textarea id="dslInput" spellcheck="false" placeholder="Enter bire 4-space indented DSL..."></textarea>
+      </div>
+    </div>
+
+    <div class="inspector">
+      <div class="inspector-header">
+        <span style="font-size: 0.85rem; font-weight: 500; color: var(--purple);">Live Match Inspector</span>
+        <span id="matchStatus" style="font-family: var(--mono); font-size: 0.8rem; color: var(--text-muted);">Waiting for input</span>
+      </div>
+      <input type="text" id="testString" class="inspector-input" placeholder="Type test string to check matches in real time...">
+      <div class="matches" id="groupList"></div>
+    </div>
+  </main>
+
+  <script>
+    let pyodide = null;
+    let debounceTimer = null;
+
+    const PRESETS = __PRESETS_JSON__;
+
+    async function initPyodide() {
+      try {
+        pyodide = await loadPyodide();
+        document.getElementById('statusText').innerText = 'Loading micropip...';
+        await pyodide.loadPackage('micropip');
+
+        document.getElementById('statusText').innerText = 'Loading bire & lark...';
+        
+        async function fetchAndInstall(filename) {
+          const res = await fetch('./' + filename);
+          if (!res.ok) throw new Error('Failed to fetch ' + filename);
+          const buf = await res.arrayBuffer();
+          pyodide.FS.writeFile('/' + filename, new Uint8Array(buf));
+          await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("emfs:/" + ${JSON.stringify(filename)})
+`);
+        }
+
+        await fetchAndInstall('lark-1.3.1-py3-none-any.whl');
+        await fetchAndInstall('bire-0.1.0-py3-none-any.whl');
+
+        await pyodide.runPythonAsync('import bire\\nprint("bire wasm initialized")');
+
+        document.getElementById('statusDot').classList.add('ready');
+        document.getElementById('statusText').innerText = 'Ready';
+        loadPreset('simple');
+      } catch (err) {
+        document.getElementById('statusText').innerText = 'Error loading WASM';
+        console.error(err);
+      }
+    }
+
+    function onRegexInput() {
+      if (!pyodide) return;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        try {
+          const pattern = document.getElementById('regexInput').value;
+          const escaped = JSON.stringify(pattern);
+          const dsl = await pyodide.runPythonAsync(`bire.to_human(${escaped})`);
+          document.getElementById('dslInput').value = dsl;
+          runInspector();
+        } catch (e) {
+          document.getElementById('matchStatus').innerText = 'Invalid Regex: ' + e.message.split('\\n')[0];
+          document.getElementById('matchStatus').style.color = 'var(--red)';
+        }
+      }, 120);
+    }
+
+    function onDslInput() {
+      if (!pyodide) return;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        try {
+          const dsl = document.getElementById('dslInput').value;
+          const escaped = JSON.stringify(dsl);
+          const pyPattern = await pyodide.runPythonAsync(`
+def _convert(dsl_code):
+    p, f = bire.to_python(dsl_code)
+    if f:
+        from bire.renderers.python_renderer import _flags_to_letters
+        letters = _flags_to_letters(f)
+        if letters:
+            p = f"(?{letters}){p}"
+    return p if isinstance(p, str) else p.decode("latin1")
+
+_convert(${escaped})
+`);
+          document.getElementById('regexInput').value = pyPattern;
+          runInspector();
+        } catch (e) {
+          document.getElementById('matchStatus').innerText = 'Invalid DSL: ' + e.message.split('\\n')[0];
+          document.getElementById('matchStatus').style.color = 'var(--red)';
+        }
+      }, 120);
+    }
+
+    async function runInspector() {
+      if (!pyodide) return;
+      const pattern = document.getElementById('regexInput').value;
+      const test = document.getElementById('testString').value;
+      const status = document.getElementById('matchStatus');
+      const groupList = document.getElementById('groupList');
+      groupList.innerHTML = '';
+
+      if (!pattern) {
+        status.innerText = 'Waiting for pattern';
+        status.style.color = 'var(--text-muted)';
+        return;
+      }
+      if (!test) {
+        status.innerText = 'Waiting for test string';
+        status.style.color = 'var(--text-muted)';
+        return;
+      }
+
+      try {
+        const res = await pyodide.runPythonAsync(`
+def _inspect_match(p, t):
+    import re, json
+    try:
+        cp = re.compile(p)
+    except Exception as e:
+        return json.dumps({"status": "error", "error": str(e)})
+
+    fm = cp.fullmatch(t)
+    if fm:
+        return json.dumps({
+            "status": "fullmatch",
+            "span": list(fm.span()),
+            "groups": fm.groupdict(),
+            "tuple": list(fm.groups())
+        })
+    sm = cp.search(t)
+    if sm:
+        return json.dumps({
+            "status": "partialmatch",
+            "span": list(sm.span()),
+            "groups": sm.groupdict(),
+            "tuple": list(sm.groups())
+        })
+    return json.dumps({"status": "nomatch"})
+
+_inspect_match(${JSON.stringify(pattern)}, ${JSON.stringify(test)})
+`);
+        const data = JSON.parse(res);
+        if (data.status === 'fullmatch') {
+          status.innerText = '✔ Full Match (span 0:' + test.length + ')';
+          status.style.color = 'var(--green)';
+        } else if (data.status === 'partialmatch') {
+          status.innerText = '✔ Partial Match (span ' + data.span[0] + ':' + data.span[1] + ')';
+          status.style.color = 'var(--purple)';
+        } else if (data.status === 'nomatch') {
+          status.innerText = '✘ No Match';
+          status.style.color = 'var(--text-muted)';
+        } else if (data.status === 'error') {
+          status.innerText = 'Regex Error: ' + data.error;
+          status.style.color = 'var(--red)';
+        }
+
+        if (data.groups && Object.keys(data.groups).length > 0) {
+          for (const [k, v] of Object.entries(data.groups)) {
+            const el = document.createElement('div');
+            el.className = 'group-tag';
+            el.innerHTML = '<span>' + k + ':</span> ' + (v !== null ? v : '<em style="opacity:0.4">null</em>');
+            groupList.appendChild(el);
+          }
+        } else if (data.tuple && data.tuple.length > 0) {
+          data.tuple.forEach((val, idx) => {
+            const el = document.createElement('div');
+            el.className = 'group-tag';
+            el.innerHTML = '<span>Group ' + (idx + 1) + ':</span> ' + (val !== null ? val : '<em style="opacity:0.4">null</em>');
+            groupList.appendChild(el);
+          });
+        }
+      } catch (err) {
+        status.innerText = 'Execution Error: ' + (err.message ? err.message.split('\\n')[0] : String(err));
+        status.style.color = 'var(--red)';
+      }
+    }
+
+    function loadPreset(key) {
+      const preset = PRESETS[key];
+      if (!preset) return;
+      document.getElementById('regexInput').value = preset.regex;
+      document.getElementById('testString').value = preset.test;
+      onRegexInput();
+    }
+
+    function copyText(inputId, btnId) {
+      navigator.clipboard.writeText(document.getElementById(inputId).value);
+      const btn = document.getElementById(btnId);
+      const orig = btn.innerText;
+      btn.innerText = 'Copied!';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => {
+        btn.innerText = orig;
+        btn.style.color = '';
+      }, 1200);
+    }
+
+    document.getElementById('regexInput').addEventListener('input', onRegexInput);
+    document.getElementById('dslInput').addEventListener('input', onDslInput);
+    document.getElementById('testString').addEventListener('input', runInspector);
+
+    initPyodide();
+  </script>
+</body>
+</html>
+"""
+
+final_html = html_template.replace("__PRESETS_JSON__", presets_json)
+Path("docs/index.html").write_text(final_html, encoding="utf-8")
+print("docs/index.html written successfully!")

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>bire ✦ bilingual regex transpiler</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23f472b6%22>✦</text></svg>">
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
   <style>
     :root {
@@ -199,7 +200,7 @@
 </head>
 <body>
   <header>
-    <div class=brand>
+    <div class="brand">
       <span class="sparkle">✦</span>
       <span>bire</span>
       <span class="badge-wasm">Python WASM</span>
@@ -253,27 +254,27 @@
     let debounceTimer = null;
 
     const PRESETS = {
-      email: {
-        regex: '^(?P<local>(?:[a-zA-Z0-9!#$%&'*+/=?^_{|}~-]+|"(?:[^\x00-\x08\x0a-\x1f\x7f\"\\]|\\[\x20-\x7e])*"))*)@(?P<domain>(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*|\[(?:[^\x00-\x08\x0a-\x1f\x7f\[\]\\]|\\[\x20-\x7e])*\]))$',
-        test: 'user.name+tag@[192.168.1.1]'
-      },
-      semver: {
-        regex: '^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?(?:\+(?P<build>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$',
-        test: '1.2.3-alpha.1+build.42'
-      },
-      ipv4: {
-        regex: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$',
-        test: '192.168.1.254'
-      },
-      django: {
-        regex: '^api/v(?P<version>[1-9]\d*)/(?P<resource>[a-z_-]+)/(?:(?P<id>\d+)/)?$',
-        test: 'api/v1/users/42/'
-      },
-      simple: {
-        regex: 'cat|dog|bird',
-        test: 'dog'
-      }
-    };
+  "email": {
+    "regex": "^(?P<local>(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+|\"(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\\"\\\\]|\\\\[\\x20-\\x7e])*\")(?:\\.(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+|\"(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\\"\\\\]|\\\\[\\x20-\\x7e])*\"))*)@(?P<domain>(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)*|\\[(?:[^\\x00-\\x08\\x0a-\\x1f\\x7f\\[\\]\\\\]|\\\\[\\x20-\\x7e])*\\]))$",
+    "test": "user.name+tag@[192.168.1.1]"
+  },
+  "semver": {
+    "regex": "^(?P<major>0|[1-9]\\d*)\\.(?P<minor>0|[1-9]\\d*)\\.(?P<patch>0|[1-9]\\d*)(?:-(?P<prerelease>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?(?:\\+(?P<build>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+    "test": "1.2.3-alpha.1+build.42"
+  },
+  "ipv4": {
+    "regex": "^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$",
+    "test": "192.168.1.254"
+  },
+  "django": {
+    "regex": "^api/v(?P<version>[1-9]\\d*)/(?P<resource>[a-z_-]+)/(?:(?P<id>\\d+)/)?$",
+    "test": "api/v1/users/42/"
+  },
+  "simple": {
+    "regex": "cat|dog|bird",
+    "test": "dog"
+  }
+};
 
     async function initPyodide() {
       try {
@@ -288,14 +289,16 @@
           if (!res.ok) throw new Error('Failed to fetch ' + filename);
           const buf = await res.arrayBuffer();
           pyodide.FS.writeFile('/' + filename, new Uint8Array(buf));
-          await pyodide.runPythonAsync();
+          await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("emfs:/" + ${JSON.stringify(filename)})
+`);
         }
 
         await fetchAndInstall('lark-1.3.1-py3-none-any.whl');
         await fetchAndInstall('bire-0.1.0-py3-none-any.whl');
 
-        await pyodide.runPythonAsync('import bire
-print("bire wasm initialized")');
+        await pyodide.runPythonAsync('import bire\nprint("bire wasm initialized")');
 
         document.getElementById('statusDot').classList.add('ready');
         document.getElementById('statusText').innerText = 'Ready';
@@ -313,12 +316,11 @@ print("bire wasm initialized")');
         try {
           const pattern = document.getElementById('regexInput').value;
           const escaped = JSON.stringify(pattern);
-          const dsl = await pyodide.runPythonAsync();
+          const dsl = await pyodide.runPythonAsync(`bire.to_human(${escaped})`);
           document.getElementById('dslInput').value = dsl;
           runInspector();
         } catch (e) {
-          document.getElementById('matchStatus').innerText = 'Invalid Regex: ' + e.message.split('
-')[0];
+          document.getElementById('matchStatus').innerText = 'Invalid Regex: ' + e.message.split('\n')[0];
           document.getElementById('matchStatus').style.color = 'var(--red)';
         }
       }, 120);
@@ -331,12 +333,22 @@ print("bire wasm initialized")');
         try {
           const dsl = document.getElementById('dslInput').value;
           const escaped = JSON.stringify(dsl);
-          const pyPattern = await pyodide.runPythonAsync();
+          const pyPattern = await pyodide.runPythonAsync(`
+def _convert(dsl_code):
+    p, f = bire.to_python(dsl_code)
+    if f:
+        from bire.renderers.python_renderer import _flags_to_letters
+        letters = _flags_to_letters(f)
+        if letters:
+            p = f"(?{letters}){p}"
+    return p if isinstance(p, str) else p.decode("latin1")
+
+_convert(${escaped})
+`);
           document.getElementById('regexInput').value = pyPattern;
           runInspector();
         } catch (e) {
-          document.getElementById('matchStatus').innerText = 'Invalid DSL: ' + e.message.split('
-')[0];
+          document.getElementById('matchStatus').innerText = 'Invalid DSL: ' + e.message.split('\n')[0];
           document.getElementById('matchStatus').style.color = 'var(--red)';
         }
       }, 120);
@@ -362,13 +374,40 @@ print("bire wasm initialized")');
       }
 
       try {
-        const res = await pyodide.runPythonAsync();
+        const res = await pyodide.runPythonAsync(`
+def _inspect_match(p, t):
+    import re, json
+    try:
+        cp = re.compile(p)
+    except Exception as e:
+        return json.dumps({"status": "error", "error": str(e)})
+
+    fm = cp.fullmatch(t)
+    if fm:
+        return json.dumps({
+            "status": "fullmatch",
+            "span": list(fm.span()),
+            "groups": fm.groupdict(),
+            "tuple": list(fm.groups())
+        })
+    sm = cp.search(t)
+    if sm:
+        return json.dumps({
+            "status": "partialmatch",
+            "span": list(sm.span()),
+            "groups": sm.groupdict(),
+            "tuple": list(sm.groups())
+        })
+    return json.dumps({"status": "nomatch"})
+
+_inspect_match(${JSON.stringify(pattern)}, ${JSON.stringify(test)})
+`);
         const data = JSON.parse(res);
         if (data.status === 'fullmatch') {
           status.innerText = '✔ Full Match (span 0:' + test.length + ')';
           status.style.color = 'var(--green)';
         } else if (data.status === 'partialmatch') {
-          status.innerText = '✔ Match (span ' + data.span[0] + ':' + data.span[1] + ')';
+          status.innerText = '✔ Partial Match (span ' + data.span[0] + ':' + data.span[1] + ')';
           status.style.color = 'var(--purple)';
         } else if (data.status === 'nomatch') {
           status.innerText = '✘ No Match';
@@ -394,8 +433,7 @@ print("bire wasm initialized")');
           });
         }
       } catch (err) {
-        status.innerText = 'Execution Error: ' + (err.message ? err.message.split('
-')[0] : String(err));
+        status.innerText = 'Execution Error: ' + (err.message ? err.message.split('\n')[0] : String(err));
         status.style.color = 'var(--red)';
       }
     }
